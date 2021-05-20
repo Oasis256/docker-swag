@@ -1,0 +1,52 @@
+---
+version: "2"
+services:
+  mariadb:
+    image: linuxserver/mariadb
+    container_name: mariadb
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - MYSQL_ROOT_PASSWORD=Heaven
+      - TZ=Africa/Kampala
+      - MYSQL_DATABASE=fman
+      - MYSQL_USER=Oasis
+      - MYSQL_PASSWORD=Heaven
+#      - REMOTE_SQL="http://edit.webshule.online/man.sql"
+#    ports:
+#      - 3306:3306
+    volumes:
+      - '/home/Oasis/Vault/mariadb:/config'
+    restart: unless-stopped
+  letsencrypt:
+    image: fman:release-v1
+    container_name: letsencrypt
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Africa/Kampala
+      - URL=webshule.online
+      - SUBDOMAINS=wildcard
+      - VALIDATION=dns
+      - DNSPLUGIN=cloudflare
+      - EMAIL=oasis.sheila@my.com
+    volumes:
+      - '~/Vault/letsencrypt/www/data/files:/webData'
+      - '~/:/Web'
+      - '/home/Oasis/Vault/letsencrypt:/config'
+      # - '/var/www:/Server'
+      - '/etc/bigbluebutton/nginx:/Web/Vault/Editor/Nginx'
+      - '/etc/bigbluebutton/bbb-web.properties:/Web/Vault/Editor/Overrides/WebShule.properties'
+      - '/etc/bigbluebutton/bbb-html5.yml:/Web/Vault/Editor/Overrides/shule.yml'
+      - '/etc/nginx/sites-available/bigbluebutton:/Web/Vault/Editor/Nginx/shule.nginx'
+      - '/var/bigbluebutton/playback:/Web/Vault/Editor/Player'
+
+
+    ports:
+      - 444:443
+    #   - 800:80
+    depends_on:
+      - mariadb
+    restart: unless-stopped

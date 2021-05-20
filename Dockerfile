@@ -18,8 +18,7 @@ RUN \
 	g++ \
 	gcc \
 	libffi-dev \
-	openssl-dev \
-	python3-dev && \
+	openssl-dev && \
  echo "**** install runtime packages ****" && \
  apk add --no-cache --upgrade \
 	curl \
@@ -84,10 +83,38 @@ RUN \
 	php7-xmlrpc \
 	php7-xsl \
 	php7-zip \
+	php7-xdebug \
+	php7-gettext \
+	php7-memcache \
+	php7-imagick \
 	py3-cryptography \
 	py3-future \
 	py3-pip \
 	whois && \
+echo "**** Manually install swoole ****" && \
+    apk update && apk upgrade && \
+    apk add wget vim bash git tar curl grep zlib make libxml2 readline \
+    freetype openssl libjpeg-turbo libpng libmcrypt libwebp icu &&\
+    buildDeps=" build-base re2c file readline-dev autoconf binutils bison \
+        libxml2-dev curl-dev freetype-dev openssl-dev \
+        libjpeg-turbo-dev libpng-dev libwebp-dev libmcrypt-dev \
+        gmp-dev icu-dev libmemcached-dev linux-headers" \
+    && apk --update add $buildDeps && \
+    apk add \
+	libmemcached-dev \
+	php7-dev \
+	php7 \
+	php7-pear \
+	php7-opcache && \
+    rm -rf /var/cache/apk/* &&\
+    sed -i "s/struct sigaction {/#ifndef __sighandler_t \ntypedef void (*__sighandler_t)(int);\n#endif\nstruct sigaction\n{/g" /usr/include/signal.h && \
+    sed -i "s/union {void (*sa_handler)(int)/__sighandler_t sa_handler/g" /usr/include/signal.h && \
+    sed -i "s/ -n / /" `which pecl`&& \
+echo "**** install php SWOOLE 4dLuvOfEditah****" && \
+    pecl install swoole && \
+    # pecl install xdebug && \
+    echo "extension=swoole.so" > /etc/php7/conf.d/swoole.ini && \
+    # echo "zend_extension=/usr/lib/php7/modules/xdebug.so" > /etc/php7/conf.d/xdebug.ini && \
  echo "**** install certbot plugins ****" && \
  if [ -z ${CERTBOT_VERSION+x} ]; then \
         CERTBOT="certbot"; \
