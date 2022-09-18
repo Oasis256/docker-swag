@@ -1,0 +1,408 @@
+x-common: &common # image: oasis256/streamlink
+  build:
+    context: ~/Prog
+    args:
+      VERSION: 3.2.0
+    # dockerfile: Dockerfile
+  env_file:
+    - ~/Prog/global.env
+  #   - default.env
+  #   - clientid.env
+  # user: 1027:100
+  logging:
+    driver: json-file
+    options:
+      max-size: 5m
+  restart: unless-stopped
+
+  x-common-ytd: &ytd # image: oasis256/streamlink
+  build:
+    context: ~/Prog/ytd
+    args:
+      VERSION: 3.2.0
+    # dockerfile: Dockerfile
+  env_file:
+    - ~/Prog/global.env
+  #   - default.env
+  #   - clientid.env
+  # user: 1027:100
+  logging:
+    driver: json-file
+    options:
+      max-size: 5m
+  restart: unless-stopped
+
+x-common-ram: &ram
+  deploy:
+    resources:
+      limits:
+        memory: 256M
+# ---
+version: "3.7"
+services:
+  mariadb:
+    image: linuxserver/mariadb:latest
+    container_name: mariadb
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - MYSQL_ROOT_PASSWORD=Heaven
+      - TZ=Africa/Kampala
+      - MYSQL_DATABASE=run #optional
+      - MYSQL_USER=Oasis #optional
+      - MYSQL_PASSWORD=Heaven #optional
+      - REMOTE_SQL= #optional
+    volumes:
+      - ~/Vault/config/Swag/dBase:/config
+    restart: unless-stopped
+
+  swag:
+    # image: oasis256/streamlink
+    build:
+      context: ~/Prog/swag
+      args:
+        VERSION: 3.2.0
+      dockerfile: Dockerfile
+    image: oasis256/swag:latest
+    container_name: swag
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=AAfricafrica/Kampala
+      - URL=shule.live
+      - VALIDATION=dns
+      - SUBDOMAINS=vid,reads,fman,rea,jak,pot,lid,qf,qb,min,nex,code, #optional
+      - CERTPROVIDER= #optional
+      - DNSPLUGIN=cloudflare #optional
+      - PROPAGATION= #optiocodenal
+      - DUCKDNSTOKEN= #optional
+      - EMAIL=oasis.sybill@gmail.com #optional
+      - ONLY_SUBDOMAINS=false #optional
+      - EXTRA_DOMAINS= #optional
+      - STAGING=false #optionaloptiocodenal
+    volumes:
+      - ~/Vault/config:/config
+      - ~/sVault:/mnt
+      - ~/Vault:/mnt/Vault
+      - ~/Prog:/mnt/Prog
+      # - ~/Vault/config/phpSwag:/usr/bin/php
+    # ports:
+    #   - 443:443
+    #   - 80:80 #optional
+    depends_on:
+      - mariadb
+    restart: unless-stopped
+
+  code-server:
+    image: linuxserver/code-server:latest #linuxserver/code-server:latest
+    container_name: code-server
+    environment:
+      - PUID=1000
+      - PGID=1000
+      # $(id -u):$(id -g)
+      - TZ=Africa/Kampala
+      - PASSWORD=Heaven #optionaloptiocodenal
+      - HASHED_PASSWORD= #optional
+      - SUDO_PASSWORD=Heaven #optional
+      - SUDO_PASSWORD_HASH= #optional
+      - PROXY_DOMAIN=code.shule.live #optional
+      - DEFAULT_WORKSPACE=/mnt/Prog #/config/workspace #optional
+    volumes:
+      - ~/Vault/config/Swag/vCode:/config
+      - ~/Vault/config/phpSwag:/usr/bin/php
+      # - ~/Vault/config/docker:/usr/bin/docker
+      # - /var/run/docker.sock:/var/run/docker.sock
+      - ~/sVault:/mnt
+      - ~/Vault:/mnt/Vault
+      - ~/Prog:/mnt/Prog
+    ports:
+      - 84:8443
+    restart: unless-stopped
+
+  file-browser:
+    image: filebrowser/filebrowser:latest
+    container_name: fMan
+    # user: 1000:1000
+    ports:
+      - 82:80
+    volumes:
+      - ~/sVault:/srv
+      - ~/Vault/config/Swag/fMan/filebrowser.db:/database/filebrowser.db
+      # - ~/Vault/config/Swag/fMan/fMan.json:/.filebrowser.json
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  qflood:
+    container_name: qflood
+    image: cr.hotio.dev/hotio/qbittorrent:latest #cr.hotio.dev/hotio/qflood
+    ports:
+      - 83:8080
+      # - 3000:3000
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Africa/Kampala
+      - FLOOD_AUTH=false
+    volumes:
+      - ~/Vault/config/Swag/Qflood:/config
+      - ~/sVault/Ninsiima/Fun/Movies:/Movies
+      - ~/sVault/Ninsiima/Fun/Adult:/Adult
+      - ~/sVault/Ninsiima/Fun/Music:/Music
+      - ~/sVault/Ninsiima/Fun/Series:/Series
+      - ~/sVault/Ninsiima/Fun/Books:/Audiobooks
+      - ~/sVault/Ninsiima/Fun/Stagging/dMovies:/data/Movies
+      - ~/sVault/Ninsiima/Fun/Stagging/dAdult:/data/Adult
+      - ~/sVault/Ninsiima/Fun/Stagging/dMusic:/data/Music
+      - ~/sVault/Ninsiima/Fun/Stagging/dSeries:/data/Series
+      - ~/sVault/Ninsiima/Fun/Stagging/dBooks:/data/Books
+    restart: unless-stopped
+
+  pimpmystremio:
+    image: sleeyax/pimpmystremio:latest
+    container_name: pimpmystremio
+    volumes:
+      - ~/Vault/config/Swag/PimpMyStremio:/root/.local/share/PimpMyStremio/
+      - ~/sVault/Ninsiima/Software/Pimp:/app/sideloaded
+    ports:
+      - 7777:7777
+    restart: unless-stopped
+
+  jellyfin:
+    image: jellyfin/jellyfin:unstable #linuxserver/jellyfin:nightly
+    container_name: jellyfin
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Africa/Kampala
+      - JELLYFIN_PublishedServerUrl=https://vid.shule.live #optional
+    volumes:
+      - ~/Vault/config/Swag/Jellyfin:/config
+      - ~/sVault/Ninsiima/Fun/Series:/data/tvshows
+      - ~/sVault/Ninsiima/Fun/Music:/data/music
+      - ~/sVault/Ninsiima/Fun/Movies:/data/movie
+      - ~/sVault/Ninsiima/Fun/DeeMix:/data/DeeMix
+      - ~/sVault/Ninsiima/Fun/mVideos:/data/Vidoes
+      # - ~/Vault/config/Swag/Jellyfin/web:/jellyfin/jellyfin-web
+    ports:
+      - 8090:8096
+      - 8920:8920 #optional
+      - 7359:7359/udp #optional
+      - 1900:1900/udp #optional
+    restart: unless-stopped
+
+  jellyfin-vue:
+    image: jellyfin/jellyfin-vue:unstable #linuxserver/jellyfin:nightly
+    container_name: jellyfin-vue
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Africa/Kampala
+    ports:
+      - 8240:80
+    restart: unless-stopped
+
+  jfa-g:
+    container_name: jfa-go
+    image: hrfee/jfa-go
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Africa/Kampala
+    volumes:
+      - ~/Vault/config/Swag/Jfa-go:/data
+      - ~/Vault/config/Swag/Jellyfin:/jf
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - 8056:8056
+      - 8057:8057
+    restart: unless-stopped
+
+  ombi:
+    image: linuxserver/ombi:latest #:4.16.5-development
+    container_name: ombi
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=africa/Kampala
+      # - BASE_URL=/ombi #optional
+    volumes:
+      - ~/Vault/config/Swag/Ombi:/config
+    ports:
+      - 3579:3579
+    restart: unless-stopped
+
+  yacht:
+    image: selfhostedpro/yacht:latest
+    container_name: yacht
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Africa/Kampala
+    ports:
+      - 8300:8000
+    volumes:
+      - ~/Vault/config/Swag/Yatch:/config
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+
+  projectsend:
+    image: linuxserver/projectsend:latest
+    container_name: projectsend
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Africa/Kampala
+      - MAX_UPLOAD=5000
+    volumes:
+      - ~/Vault/config/Swag/Send:/config
+      - ~/sVault/Ninsiima/Fun/Send:/data
+    ports:
+      - 8290:80
+    restart: unless-stopped
+
+  audiolibrary:
+    build:
+      context: ~/Prog/bookShelf
+      dockerfile: Dockerfile
+      # args:
+      #   - buildno=3
+      #   - gitcommithash=54dec94
+    image: oasis256/audiolibrary:2.1.5 #oasis256/bookshelf #oasis256/audiolibrary
+    labels:
+      live.shule.reads: "Self Hosted Book Shelf"
+    container_name: bookShelf
+    environment:
+      - AUDIOBOOKSHELF_UID=1000
+      - AUDIOBOOKSHELF_GID=1000
+      - UMASK=022
+      - TZ=Africa/Kampala
+    volumes:
+      - ~/sVault/Ninsiima/Fun/Books/Audiobooks:/Audiobooks
+      - ~/sVault/Ninsiima/Fun/Books/Ebooks:/Ebooks
+      - ~/sVault/Ninsiima/Fun/Books/Private:/Private
+      - ~/sVault/Ninsiima/Fun/Books/Podcasts:/Podcasts
+      - ~/Vault/config/Swag/Shelf:/config
+      - ~/Vault/config/Swag/Shelf/LOGS:/root/.npm/_logs
+      - ~/Vault/config/Swag/Shelf/meta:/metadata
+    ports:
+      - 13378:80
+    restart: unless-stopped
+
+  piwigo:
+    image: lscr.io/linuxserver/piwigo:latest
+    container_name: piwigo
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/London
+    volumes:
+      - ~/Vault/config/Swag/Piwigo:/config
+      - ~/sVault/Ninsiima/Fun/OrgPhoto:/gallery
+    ports:
+      - 8012:80
+    restart: unless-stopped
+
+  flaresolverr:
+    # DockerHub mirror flaresolverr/flaresolverr:latest
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_HTML=${LOG_HTML:-false}
+      - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-none}
+      - TZ=Africa/Kampala
+    ports:
+      # - "${PORT:-8191}:8191"
+      - 8191:8191
+    restart: unless-stopped
+
+  # pyload-ng:
+  #   image: linuxserver/pyload-ng
+  #   container_name: pyload-ng
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - TZ=Africa/Kampala
+  #   volumes:
+  #     - ~/Vault/config/Swag/Pyload:/config
+  #     - ~/sVault/Ninsiima/Fun/Stagging/Pyload:/downloads
+  #   ports:
+  #     - 8030:8000
+  #     - 9660:9666 #optional
+  #   restart: unless-stopped
+
+  deemix:
+    # <<: *common
+    image: finniedj/deemix:latest #registry.gitlab.com/bockiii/deemix-docker
+    container_name: deemix
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Africa/Kampala
+      - UMASK_SET=022
+      - DEEMIX_SINGLE_USER=true
+    volumes:
+      - ~/sVault/Ninsiima/Fun/DeeMix:/downloads
+      - ~/Vault/config/Swag/DeeMix:/config
+    ports:
+      - 1990:6595
+    restart: unless-stopped
+
+  adguard:
+    image: adguard/adguardhome:latest
+    container_name: adguardhome
+    volumes:
+      - ~/Vault/config/Swag/Adguard/workdir:/opt/adguardhome/work
+      - ~/Vault/config/Swag/Adguard/confdir:/opt/adguardhome/conf
+    network_mode: host
+    # ports:
+    #   - '53:53/tcp'
+    #   - '53:53/udp'
+    #   - '67:67/udp'
+    #   - '68:68/udp'
+    #   - '840:840/tcp'
+    #   - '453:453/tcp'
+    #   - '453:453/udp'
+    #   - '3000:3000/tcp'
+    #   - '784:784/udp'
+    #   - '803:853/udp'
+    #   - '8853:8853/udp'
+    #   - '5443:5443/tcp'
+    #   - '5443:5443/udp'
+    #   - '803:853/tcp'
+    restart: unless-stopped
+
+  netdata:
+    image: netdata/netdata
+    container_name: netdata
+    hostname: nex.shule.live # set to fqdn of host
+    ports:
+      - 835:19999
+    restart: unless-stopped
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - apparmor:unconfined
+    volumes:
+      - netdataconfig:/etc/netdata
+      - netdatalib:/var/lib/netdata
+      - netdatacache:/var/cache/netdata
+      - /etc/passwd:/host/etc/passwd:ro
+      - /etc/group:/host/etc/group:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /etc/os-release:/host/etc/os-release:ro
+    environment:
+      - NETDATA_CLAIM_TOKEN=YhkJXWGw8oltq6HZ-0kFf00ga1CBWbnptEHuekjrMxErx-fSsqWmJCqNihcIbOxUASNxU1IKvlfS-ehH7_9Xe-v5qHL0Ce5uRdY9JT9Kyh7ySWFtPGG9S7CMMZd69WceRW2EGi8
+      - NETDATA_CLAIM_URL=https://app.netdata.cloud
+      - NETDATA_CLAIM_ROOMS=7facd6c8-0a14-4178-a435-f9a813fee61b
+
+volumes:
+  netdataconfig:
+  netdatalib:
+  netdatacache:
+
+

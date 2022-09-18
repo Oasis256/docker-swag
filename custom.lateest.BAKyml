@@ -1,0 +1,957 @@
+x-common: &common # image: oasis256/streamlink
+  build:
+    context: ~/Prog
+    args:
+      VERSION: 3.2.0
+    # dockerfile: Dockerfile
+  env_file:
+    - ~/Prog/global.env
+  #   - default.env
+  #   - clientid.env
+  # user: 1027:100
+  logging:
+    driver: json-file
+    options:
+      max-size: 5m
+  restart: unless-stopped
+
+  x-common-ytd: &ytd # image: oasis256/streamlink
+  build:
+    context: ~/Prog/ytd
+    args:
+      VERSION: 3.2.0
+    # dockerfile: Dockerfile
+  env_file:
+    - ~/Prog/global.env
+  #   - default.env
+  #   - clientid.env
+  # user: 1027:100
+  logging:
+    driver: json-file
+    options:
+      max-size: 5m
+  restart: unless-stopped
+
+x-common-ram: &ram
+  deploy:
+    resources:
+      limits:
+        memory: 256M
+# ---
+version: "3.7"
+services:
+  mariadb:
+    image: linuxserver/mariadb:latest
+    container_name: mariadb
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - MYSQL_ROOT_PASSWORD=Heaven
+      - TZ=Africa/Kampala
+      - MYSQL_DATABASE=run #optional
+      - MYSQL_USER=Oasis #optional
+      - MYSQL_PASSWORD=Heaven #optional
+      - REMOTE_SQL= #optional
+    volumes:
+      - ~/Vault/config/Swag/dBase:/config
+    restart: unless-stopped
+
+  # phpmyadmin:
+  #   image: linuxserver/phpmyadmin:latest
+  #   container_name: phpmyadmin
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - TZ=Africa/Kampala
+  #     - PMA_ARBITRARY=1 #optional
+  #     - PMA_ABSOLUTE_URI=https://db.shule.live #optional
+  #   volumes:
+  #     - ~/Vault/config/Swag/myAdmin:/config
+  #   ports:
+  #     - 85:80
+  #   restart: unless-stopped
+
+  swag:
+    # image: oasis256/streamlink
+    build:
+      context: ~/Prog/swag
+      args:
+        VERSION: 3.2.0
+      dockerfile: Dockerfile
+    image: oasis256/swag
+    container_name: swag
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=AAfricafrica/Kampala
+      - URL=shule.live
+      - VALIDATION=dns
+      - SUBDOMAINS=vid,reads,fman,rea,jak,pot,lid,qf,qb,min,nex,code, #optional
+      - CERTPROVIDER= #optional
+      - DNSPLUGIN=cloudflare #optional
+      - PROPAGATION= #optiocodenal
+      - DUCKDNSTOKEN= #optional
+      - EMAIL=oasis.sybill@gmail.com #optional
+      - ONLY_SUBDOMAINS=false #optional
+      - EXTRA_DOMAINS= #optional
+      - STAGING=false #optionaloptiocodenal
+    volumes:
+      - ~/Vault/config:/config
+      - ~/sVault:/mnt
+      - ~/Vault:/mnt/Vault
+      - ~/Prog:/mnt/Prog
+      # - ~/Vault/config/phpSwag:/usr/bin/php
+    # ports:
+    #   - 443:443
+    #   - 80:80 #optional
+    depends_on:
+      - mariadb
+    restart: unless-stopped
+
+  code-server:
+    image: linuxserver/code-server:latest #linuxserver/code-server:latest
+    container_name: code-server
+    environment:
+      - PUID=1000
+      - PGID=1000
+      # $(id -u):$(id -g)
+      - TZ=Africa/Kampala
+      - PASSWORD=Heaven #optionaloptiocodenal
+      - HASHED_PASSWORD= #optional
+      - SUDO_PASSWORD=Heaven #optional
+      - SUDO_PASSWORD_HASH= #optional
+      - PROXY_DOMAIN=code.shule.live #optional
+      - DEFAULT_WORKSPACE=/mnt/Prog #/config/workspace #optional
+    volumes:
+      - ~/Vault/config/Swag/vCode:/config
+      - ~/Vault/config/phpSwag:/usr/bin/php
+      # - ~/Vault/config/docker:/usr/bin/docker
+      # - /var/run/docker.sock:/var/run/docker.sock
+      - ~/sVault:/mnt
+      - ~/Vault:/mnt/Vault
+      - ~/Prog:/mnt/Prog
+    ports:
+      - 84:8443
+    restart: unless-stopped
+
+  file-browser:
+    image: filebrowser/filebrowser:latest
+    container_name: fMan
+    # user: 1000:1000
+    ports:
+      - 82:80
+    volumes:
+      - ~/sVault:/srv
+      - ~/Vault/config/Swag/fMan/filebrowser.db:/database/filebrowser.db
+      # - ~/Vault/config/Swag/fMan/fMan.json:/.filebrowser.json
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  # diskover:
+  #   image: lscr.io/linuxserver/diskover
+  #   container_name: diskover
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - TZ=Africa/Kampala
+  #     - ES_HOST=elasticsearch
+  #     - ES_PORT=9200
+  #     # - ES_USER=diskover
+  #     # - ES_PASS=Heaven256
+  #   volumes:
+  #     - ~/Vault/config/Swag/Diskover:/config
+  #     - ~/sVault:/data
+  #   ports:
+  #     - 9100:80
+  #   mem_limit: 4096m
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - elasticsearch
+  # elasticsearch:
+  #   hostname: elastic
+  #   container_name: elasticsearch
+  #   image: docker.elastic.co/elasticsearch/elasticsearch:7.10.2
+  #   environment:
+  #     - discovery.type=single-node
+  #     - xpack.security.enabled=true
+  #     - bootstrap.memory_lock=true
+  #     - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+  #   ulimits: 
+  #     memlock:
+  #       soft: -1 
+  #       hard: -1
+  #   #   nofile:
+  #   #     soft: 65536
+  #   #     hard: 65536
+  #   # cap_add: 
+  #   #   - IPC_LOCK
+  #   volumes:
+  #     - ~/Vault/config/Swag/Elasticsearch:/usr/share/elasticsearch/data
+  #   ports:
+  #     - 9200:9200
+  #   depends_on:
+  #     - elasticsearch-helper
+  #   restart: unless-stopped
+  # elasticsearch-helper:
+  #   container_name: elasticsearch-helper
+  #   image: alpine
+  #   command: sh -c "sysctl -w vm.max_map_count=262144"
+  #   restart: unless-stopped
+  #   # privileged: true
+
+
+  # elasticsearch2:
+  #   image: docker.elastic.co/elasticsearch/elasticsearch:7.12.0
+  #   container_name: elastic-onlyoffice
+  #   restart: always
+  #   environment:
+  #     - xpack.security.enabled=false
+  #     - discovery.type=single-node
+  #   ulimits: 
+  #     memlock:
+  #       soft: -1 
+  #       hard: -1
+  #     nofile:
+  #       soft: 65536
+  #       hard: 65536
+  #   cap_add: 
+  #     - IPC_LOCK
+  #   volumes:
+  #     - ~/Vault/config/Swag/Elasticsearch/OnlyOffice:/usr/share/elasticsearch/data
+  # #   ports:
+  # #     - "9200:9200"
+  # kibana:
+  #   container_name: kibana
+  #   image: docker.elastic.co/kibana/kibana:7.12.0
+  #   restart: unless-stopped
+  #   environment:
+  #     SERVER_NAME: kibana
+  #     ELASTICSEARCH_HOSTS: http://elasticsearch2:9200
+  #   ports:
+  #     - "5601:5601"
+  #   depends_on:
+  #     - elasticsearch #volumes: 
+  #   #elasticsearch-data-volume:
+  #   # driver: local
+
+
+
+
+  # organizr:
+  #   image: organizr/organizr
+  #   container_name: organizr
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - TZ=Africa/Kampala
+  #   volumes:
+  #     - ~/Vault/config/Swag/Organizr:/config
+  #   ports:
+  #     - 9983:80
+  #   restart: unless-stopped
+
+  # netbootxyz:
+  #   image: linuxserver/netbootxyz
+  #   container_name: netbootxyz
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - UMASK=022
+  #     - MENU_VERSION=2.0.59 #optional
+  #     - PORT_RANGE=30000:30010 #optional
+  #     - SUBFOLDER=/ #optional
+  #   volumes:
+  #     - ~/Vault/config/Swag/NetBoot:/config
+  #     - ~/sVault/Ninsiima/Softwares/OS:/assets #optional
+  #   ports:
+  #     - 8260:3000
+  #     - 69:69/udp
+  #     - 8270:80 #optional
+  #   restart: unless-stopped
+
+  # openvscode-server:
+  #   image: linuxserver/openvscode-server:latest
+  #   container_name: openvscode-server
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - TZ=Africa/Kampala
+  #     - CONNECTION_TOKEN= #optional
+  #     - CONNECTION_SECRET= #optional
+  #     - SUDO_PASSWORD=Heaven #optional
+  #     - SUDO_PASSWORD_HASH= #optional
+  #     - PROXY_DOMAIN=qf.shule.live #optional
+  #     - DEFAULT_WORKSPACE=/mnt/Prog #/config/workspace #optional
+  #   volumes:
+  #     - ~/Vault/config/Swag/opvCode:/config
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #     - ~/sVault:/mnt
+  #     - ~/Vault:/mnt/Vault
+  #     - ~/Prog:/mnt/Prog
+  #   ports:
+  #     - 3000:3000
+  #   restart: unless-stopped
+
+  # embystat:
+  #   image: lscr.io/linuxserver/embystat:latest
+  #   container_name: embystat
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - TZ=Africa/Kampala
+  #   volumes:
+  #     - ~/Vault/config/Swag/Embystat:/config
+  #   ports:
+  #     - 6555:6555
+  #   restart: unless-stopped
+
+  qflood:
+    container_name: qflood
+    image: cr.hotio.dev/hotio/qbittorrent:latest #cr.hotio.dev/hotio/qflood
+    ports:
+      - 83:8080
+      # - 3000:3000
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Africa/Kampala
+      - FLOOD_AUTH=false
+    volumes:
+      - ~/Vault/config/Swag/Qflood:/config
+      - ~/sVault/Ninsiima/Fun/Movies:/Movies
+      - ~/sVault/Ninsiima/Fun/Adult:/Adult
+      - ~/sVault/Ninsiima/Fun/Music:/Music
+      - ~/sVault/Ninsiima/Fun/Series:/Series
+      - ~/sVault/Ninsiima/Fun/Books:/Audiobooks
+      - ~/sVault/Ninsiima/Fun/Stagging/dMovies:/data/Movies
+      - ~/sVault/Ninsiima/Fun/Stagging/dAdult:/data/Adult
+      - ~/sVault/Ninsiima/Fun/Stagging/dMusic:/data/Music
+      - ~/sVault/Ninsiima/Fun/Stagging/dSeries:/data/Series
+      - ~/sVault/Ninsiima/Fun/Stagging/dBooks:/data/Books
+    restart: unless-stopped
+
+  pimpmystremio:
+    image: sleeyax/pimpmystremio
+    container_name: pimpmystremio
+    volumes:
+      - ~/Vault/config/Swag/PimpMyStremio:/root/.local/share/PimpMyStremio/
+      - ~/sVault/Ninsiima/Software/Pimp:/app/sideloaded
+    ports:
+      - 7777:7777
+    restart: unless-stopped
+
+  jellyfin:
+    image: jellyfin/jellyfin:unstable #linuxserver/jellyfin:nightly
+    container_name: jellyfin
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Africa/Kampala
+      - JELLYFIN_PublishedServerUrl=https://vid.shule.live #optional
+    volumes:
+      - ~/Vault/config/Swag/Jellyfin:/config
+      - ~/sVault/Ninsiima/Fun/Series:/data/tvshows
+      - ~/sVault/Ninsiima/Fun/Music:/data/music
+      - ~/sVault/Ninsiima/Fun/Movies:/data/movie
+      - ~/sVault/Ninsiima/Fun/DeeMix:/data/DeeMix
+      - ~/sVault/Ninsiima/Fun/mVideos:/data/Vidoes
+      # - ~/Vault/config/Swag/Jellyfin/web:/jellyfin/jellyfin-web
+    ports:
+      - 8090:8096
+      - 8920:8920 #optional
+      - 7359:7359/udp #optional
+      - 1900:1900/udp #optional
+    restart: unless-stopped
+
+  jellyfin-vue:
+    image: jellyfin/jellyfin-vue:unstable #linuxserver/jellyfin:nightly
+    container_name: jellyfin-vue
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Africa/Kampala
+    ports:
+      - 8240:80
+    restart: unless-stopped
+
+  jfa-g:
+    container_name: jfa-go
+    image: hrfee/jfa-go
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Africa/Kampala
+    volumes:
+      - ~/Vault/config/Swag/Jfa-go:/data
+      - ~/Vault/config/Swag/Jellyfin:/jf
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - 8056:8056
+      - 8057:8057
+    restart: unless-stopped
+
+  ombi:
+    image: linuxserver/ombi #:4.16.5-development
+    container_name: ombi
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=africa/Kampala
+      # - BASE_URL=/ombi #optional
+    volumes:
+      - ~/Vault/config/Swag/Ombi:/config
+    ports:
+      - 3579:3579
+    restart: unless-stopped
+
+  # prowlarr:
+  #   image: linuxserver/prowlarr:develop
+  #   container_name: prowlarr
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - TZ=Africa/Kampala
+  #   volumes:
+  #     - ~/Vault/config/Swag/Prowlarr:/config
+  #   ports:
+  #     - 9696:9696
+  #   restart: unless-stopped
+
+  # radarr:
+  #   image: linuxserver/radarr #:4.1.0-nightly
+  #   container_name: radarr
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - TZ=Africa/Kampala
+  #   volumes:
+  #     - ~/Vault/config/Swag/Radarr:/config
+  #     # - ~/sVault/Ninsiima/Fun/Stagging/Aria:/data/Aria
+  #     - ~/sVault/Ninsiima/Fun/Movies:/Movies #optional
+  #     - ~/sVault/Ninsiima/Fun/Stagging/dMovies:/data/Movies #optional
+  #   ports:
+  #     - 7878:7878
+  #   restart: unless-stopped
+
+  # sonarr:
+  #   image: linuxserver/sonarr #:3.0.7-develop #hotio/sonarr:latest #linuxserver/sonarr:latest
+  #   container_name: sonarr
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - TZ=Africa/Kampala
+  #   volumes:
+  #     - ~/Vault/config/Swag/Sonarr:/config
+  #     - ~/sVault/Ninsiima/Fun/Series:/Series #optional
+  #     - ~/sVault/Ninsiima/Fun/Stagging/dSeries:/data/Series
+  #   ports:
+  #     - 8989:8989
+  #   restart: unless-stopped
+
+  # readarr:
+  #   container_name: readarr
+  #   image: hotio/readarr:nightly #linuxserver/readarr:develop
+  #   ports:
+  #     - 8787:8787
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - TZ=Africa/Kampala
+  #   volumes:
+  #     - ~/Vault/config/Swag/Readarr:/config
+  #     - ~/sVault/Ninsiima/Fun/Stagging/dBooks:/data/Books
+  #     - ~/sVault/Ninsiima/Fun/Books/Audiobooks:/Audiobooks
+  #   restart: unless-stopped
+
+  # lidarr-extended:
+  #   image: randomninjaatk/lidarr-extended:latest
+  #   container_name: lidarr-extended
+  #   volumes:
+  #     - ~/Vault/config/Swag/Lidarr:/config
+  #     - ~/sVault/Ninsiima/Fun/Stagging/dMusic/LidarX:/downloads-lidarr-extended
+  #     - ~/sVault/Ninsiima/Fun/mVideos/LidarrX:/music-videos
+  #     - ~/sVault/Ninsiima/Fun/Music/LidarrX:/music
+  #     - ~/sVault/Ninsiima/Fun/Stagging/dMusic:/data/Music
+  #     - ~/sVault/Ninsiima/Fun/Music:/Music
+  #   environment:
+  #     - TZ=Africa/Kampala
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - autoStart=true
+  #     - enableAudioScript=true
+  #     - enableVideoScript=true
+  #     - scriptInterval=15m
+  #     - configureLidarrWithOptimalSettings=true
+  #     - searchSort=date
+  #     - audioFormat=native
+  #     - audioBitrate=lossless
+  #     - requireQuality=true
+  #     - enableReplaygainTags=true
+  #     - audioLyricType=both
+  #     - dlClientSource=both
+  #     - arlToken=008b96269eec9f55c7673aa0008922978c765cdddc6ce82bf3ab17e517948de395d00c2fe1ef86afa3506809750efca60c2eb192528d0d303c7c5ed424c4cda9aea734a4850d18576e6207dacb7d68e2474df938283dcdc086351f383e35f479
+  #     - tidalCountryCode=US
+  #     - addDeezerTopArtists=true
+  #     - addDeezerTopAlbumArtists=true
+  #     - addDeezerTopTrackArtists=true
+  #     - topLimit=10
+  #     - addRelatedArtists=true
+  #     - numberOfRelatedArtistsToAddPerArtist=5
+  #     - addFeaturedVideoArtists=true
+  #     - plexUrl=http://jellyfin:8096
+  #     - plexToken=627ed9f82da9456ea102180d034dbf64
+  #     - youtubeSubtitleLanguage=en
+  #   ports:
+  #     - 8686:8686
+  #   restart: unless-stopped
+
+  yacht:
+    image: selfhostedpro/yacht
+    container_name: yacht
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Africa/Kampala
+    ports:
+      - 8300:8000
+    volumes:
+      - ~/Vault/config/Swag/Yatch:/config
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+
+    
+  # ytdl_material:
+  #   container_name: ytdl
+  #   # <<: *ytd
+  #   environment: 
+  #     ytdl_mongodb_connection_string: 'mongodb://ytdl-mongo-db:27017'
+  #     ytdl_use_local_db: 'false'
+  #     write_ytdl_config: 'true'
+  #     restart: unless-stopped
+  #   depends_on:
+  #     - ytdl-mongo-db
+  #   volumes:
+  #     - ~/Vault/config/Swag/Ytd:/app/appdata
+  #     - ~/sVault/Ninsiima/Fun/Music:/app/audio
+  #     - ~/sVault/Ninsiima/Fun/mVideos:/app/video
+  #     - ~/Vault/config/Swag/Ytd/subscriptions:/app/subscriptions
+  #     - ~/Vault/config/Swag/Ytd/users:/app/users
+  #   ports:
+  #     - "8998:17442"
+  #   image: tzahi12345/youtubedl-material:latest
+  # ytdl-mongo-db:
+  #       # <<: *ytd
+  #   image: mongo
+  #   logging:
+  #       driver: "none"          
+  #   container_name: mongo-db
+  #   restart: unless-stopped
+  #   volumes:
+  #     - ~/Vault/config/Swag/Ytd/db/:/data/db
+
+
+  # mysql-workbench:
+  #   image: linuxserver/mysql-workbench:latest
+  #   container_name: mysql-workbench
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - TZ=Africa/Kampala
+  #   volumes:
+  #     - ~/Vault/config/Swag/Workbench:/config
+  #   ports:
+  #     - 3000:3000
+  #   cap_add:
+  #     - IPC_LOCK
+  #   restart: unless-stopped
+
+  # lidarr:
+  #   container_name: lidarr
+  #   image: hotio/lidarr:latest
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - UMASK=022
+  #     - TZ=Africa/Kampala
+  #   volumes:
+  #     - ~/Vault/config/Swag/Lidarr:/config
+  #     - ~/sVault/Ninsiima/Fun/Stagging/dMusic:/data/Music
+  #     - ~/sVault/Ninsiima/Fun/Music:/Music
+  #   ports:
+  #     - 8686:8686
+  #   restart: unless-stopped
+
+  # whisparr:
+  #   container_name: whisparr
+  #   image: hotio/whisparr:nightly
+  #   ports:
+  #     - "6969:6969"
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - UMASK=002
+  #     - TZ=Africa/Kampala
+  #   volumes:
+  #     - ~/Vault/config/Swag/Whisparr:/config
+  #     - ~/sVault/Ninsiima/Fun/Stagging/dAdult:/data/Adult
+  #     - ~/sVault/Ninsiima/Fun/Adult:/Adult
+  #   restart: unless-stopped
+
+  # kdenlive:
+  #   image: linuxserver/kdenlive:latest
+  #   container_name: kdenlive
+  #   security_opt:
+  #     - seccomp:unconfined #optional
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - TZ=Africa/Kampala
+  #     - SUBFOLDER=/ #optional
+  #     - KEYBOARD=en-us-qwerty #optional
+  #   volumes:
+  #     - ~/Vault/config/Swag/Kdelive:/config
+  #   ports:
+  #     - 8300:3000
+  #   devices:
+  #     - /dev/dri:/dev/dri #optional
+  #   shm_size: "1gb" #optional
+  #   restart: unless-stopped
+
+  projectsend:
+    image: linuxserver/projectsend
+    container_name: projectsend
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Africa/Kampala
+      - MAX_UPLOAD=5000
+    volumes:
+      - ~/Vault/config/Swag/Send:/config
+      - ~/sVault/Ninsiima/Fun/Send:/data
+    ports:
+      - 8290:80
+    restart: unless-stopped
+
+  # amvd:
+  #   image: truecharts/amvd #randomninjaatk/amvd
+  #   container_name: amvd
+  #   volumes:
+  #     - ~/Vault/config/Swag/Amvd:/config
+  #     - ~/sVault/Ninsiima/Fun/mVideos:/downloads-amvd
+  #     - ~/Vault/config/Swag/Amvd/config:/ama
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - TZ=Africa/Kampala
+  #     - AUTOSTART=true
+  #     - SCRIPTINTERVAL=1h
+  #     - SOURCE_CONNECTION=lidarr
+  #     - RequireVideoMatch=false
+  #     - subtitlelanguage=en
+  #     - videofilter=live
+  #     - USEFOLDERS=true
+  #     - USEVIDEOFOLDERS=true
+  #     - FilePermissions=644
+  #     - FolderPermissions=755
+  #     - MBRAINZMIRROR=https://musicbrainz.org
+  #     - MBRATELIMIT=10
+  #     - LidarrUrl=http://lidarr:8686
+  #     - LidarrAPIkey=cdacdb51a70d4dc4b9d140a20da20001
+  #     - CountryCode=us
+  #   restart: unless-stopped
+
+  audiolibrary:
+    build:
+      context: ~/Prog/bookShelf
+      dockerfile: Dockerfile
+      # args:
+      #   - buildno=3
+      #   - gitcommithash=54dec94
+    image: oasis256/audiolibrary:2.1.5 #oasis256/bookshelf #oasis256/audiolibrary
+    labels:
+      live.shule.reads: "Self Hosted Book Shelf"
+    container_name: bookShelf
+    environment:
+      - AUDIOBOOKSHELF_UID=1000
+      - AUDIOBOOKSHELF_GID=1000
+      - UMASK=022
+      - TZ=Africa/Kampala
+    volumes:
+      - ~/sVault/Ninsiima/Fun/Books/Audiobooks:/Audiobooks
+      - ~/sVault/Ninsiima/Fun/Books/Ebooks:/Ebooks
+      - ~/sVault/Ninsiima/Fun/Books/Private:/Private
+      - ~/sVault/Ninsiima/Fun/Books/Podcasts:/Podcasts
+      - ~/Vault/config/Swag/Shelf:/config
+      - ~/Vault/config/Swag/Shelf/LOGS:/root/.npm/_logs
+      - ~/Vault/config/Swag/Shelf/meta:/metadata
+    ports:
+      - 13378:80
+    restart: unless-stopped
+
+  piwigo:
+    image: lscr.io/linuxserver/piwigo:latest
+    container_name: piwigo
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/London
+    volumes:
+      - ~/Vault/config/Swag/Piwigo:/config
+      - ~/sVault/Ninsiima/Fun/OrgPhoto:/gallery
+    ports:
+      - 8012:80
+    restart: unless-stopped
+
+  # st-agent:
+  #   image: sematext/agent:latest
+  #   container_name: st-agent
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - TZ=Africa/Kampala
+  #     - INFRA_TOKEN=0874649e-a134-4bff-a910-cd39e67bd5c0
+  #     - SERVER_BASE_URL=https://spm-receiver.sematext.com
+  #     - LOGS_RECEIVER_URL=https://logsene-receiver.sematext.com
+  #     - EVENT_RECEIVER_URL=https://event-receiver.sematext.com
+  #     - COMMAND_SERVER_URL=https://command.sematext.com
+  #   cap_add:
+  #     - SYS_ADMIN
+  #   volumes:
+  #     - /:/hostfs:ro
+  #     - /etc/passwd:/etc/passwd:ro
+  #     - /etc/group:/etc/group:ro
+  #     - /var/run/:/var/run
+  #     - /sys/kernel/debug:/sys/kernel/debug
+  #     - /sys:/host/sys:ro
+  #     - /dev:/hostfs/dev:ro
+  #     - /var/run/docker.sock:/var/run/docker.sock:ro
+  #   restart: unless-stopped
+
+  flaresolverr:
+    # DockerHub mirror flaresolverr/flaresolverr:latest
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_HTML=${LOG_HTML:-false}
+      - CAPTCHA_SOLVER=${CAPTCHA_SOLVER:-none}
+      - TZ=Africa/Kampala
+    ports:
+      # - "${PORT:-8191}:8191"
+      - 8191:8191
+    restart: unless-stopped
+
+  # pyload-ng:
+  #   image: linuxserver/pyload-ng
+  #   container_name: pyload-ng
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - TZ=Africa/Kampala
+  #   volumes:
+  #     - ~/Vault/config/Swag/Pyload:/config
+  #     - ~/sVault/Ninsiima/Fun/Stagging/Pyload:/downloads
+  #   ports:
+  #     - 8030:8000
+  #     - 9660:9666 #optional
+  #   restart: unless-stopped
+
+  deemix:
+    # <<: *common
+    image: finniedj/deemix #registry.gitlab.com/bockiii/deemix-docker
+    container_name: deemix
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Africa/Kampala
+      - UMASK_SET=022
+      - DEEMIX_SINGLE_USER=true
+    volumes:
+      - ~/sVault/Ninsiima/Fun/DeeMix:/downloads
+      - ~/Vault/config/Swag/DeeMix:/config
+    ports:
+      - 1990:6595
+    restart: unless-stopped
+
+  # deemixrr:
+  #   <<: *common
+  #   image: theultimatecoder/deemixrr:nightly
+  #   container_name: deemixrr
+  #   environment:
+  #     - Kestrel__EndPoints__Http__Url=http://0.0.0.0:5555
+  #     # Hangfire dashboard
+  #     - Hangfire__DashboardPath=/autoloaderjobs
+  #     - Hangfire__Password=Heaven
+  #     - Hangfire__Username=Oasis
+  #     - Hangfire__Workers=2
+  #     # Configure the cron expression for your job
+  #     - JobConfiguration__GetUpdatesRecurringJob=0 2 * * *
+  #     - JobConfiguration__SizeCalculatorRecurringJob=0 12 * * *
+  #     # Configure the wait time between API requests value is in ms
+  #     - DelayConfiguration__ImportArtistsBackgroundJob_ExecuteDelay=1000
+  #     - DelayConfiguration__CheckArtistForUpdatesBackgroundJob_GetTrackCountDelay=1000
+  #     - DelayConfiguration__CheckArtistForUpdatesBackgroundJob_ExecuteDelay=1000
+  #     - DelayConfiguration__CheckPlaylistForUpdatesBackgroundJob_ExecuteDelay=1000
+  #     - DelayConfiguration__CreateArtistBackgroundJob_FromPlaylistDelay=1000
+  #     - DelayConfiguration__CreateArtistBackgroundJob_FromUserDelay=1000
+  #     - DelayConfiguration__CreateArtistBackgroundJob_FromCsvDelay=1000
+  #     - DelayConfiguration__CreatePlaylistBackgroundJob_FromCsvDelay=1000
+  #     # Use the id command in your shell to determine the ids
+  #     - PGID=1000
+  #     - PUID=1000
+  #     - TZ=Africa/Kampala
+  #   ports:
+  #           #remove this if you use something like nginx reverse-proxy
+  #     - 5555:5555
+  #   volumes:
+  #     # Mount the deemix config files
+  #     - ~/Vault/config/Swag/DeeMix:/config/.config/deemix
+  #     # Mount your media folder
+  #     - ~/sVault/Ninsiima/Fun/DeeMix:/mnt/unionfs
+
+  # aapanel:
+  #   <<: *common
+  #   image: aapanel/aapanel
+  #   container_name: aapanel
+  #   ports:
+  #     - 7800:8888
+  #     - 23:21
+  #     - 24:22
+  #     - 446:443
+  #     - 888:80
+  #     - 889:888
+  #   volumes:
+  #     - ~/sVault/Ninsiima/Aapanel/www:/www/wwwroot
+  #     - ~/Vault/config/Swag/Aapanel/dBase:/www/server/data
+  #     - ~/sVault/Ninsiima/Aapanel/vhost:/www/server/panel/vhost
+  #     - ~/sVault/Ninsiima/:/Storage
+
+  adguard:
+    image: adguard/adguardhome
+    container_name: adguardhome
+    volumes:
+      - ~/Vault/config/Swag/Adguard/workdir:/opt/adguardhome/work
+      - ~/Vault/config/Swag/Adguard/confdir:/opt/adguardhome/conf
+    network_mode: host
+    # ports:
+    #   - '53:53/tcp'
+    #   - '53:53/udp'
+    #   - '67:67/udp'
+    #   - '68:68/udp'
+    #   - '840:840/tcp'
+    #   - '453:453/tcp'
+    #   - '453:453/udp'
+    #   - '3000:3000/tcp'
+    #   - '784:784/udp'
+    #   - '803:853/udp'
+    #   - '8853:8853/udp'
+    #   - '5443:5443/tcp'
+    #   - '5443:5443/udp'
+    #   - '803:853/tcp'
+    restart: unless-stopped
+
+  # jackett:
+  #   image: linuxserver/jackett:latest
+  #   container_name: jackett
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - TZ=Africa/Kampala
+  #     - AUTO_UPDATE=true #optional
+  #     # - RUN_OPTS=<run options here> #optional
+  #   volumes:
+  #     - ~/Vault/config/Swag/Jackett:/config
+  #     # /- <path to blackhole>:/downloads
+  #   ports:
+  #     - 9117:9117
+  #   restart: unless-stopped
+
+  netdata:
+    image: netdata/netdata
+    container_name: netdata
+    hostname: nex.shule.live # set to fqdn of host
+    ports:
+      - 835:19999
+    restart: unless-stopped
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - apparmor:unconfined
+    volumes:
+      - netdataconfig:/etc/netdata
+      - netdatalib:/var/lib/netdata
+      - netdatacache:/var/cache/netdata
+      - /etc/passwd:/host/etc/passwd:ro
+      - /etc/group:/host/etc/group:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /etc/os-release:/host/etc/os-release:ro
+    environment:
+      - NETDATA_CLAIM_TOKEN=YhkJXWGw8oltq6HZ-0kFf00ga1CBWbnptEHuekjrMxErx-fSsqWmJCqNihcIbOxUASNxU1IKvlfS-ehH7_9Xe-v5qHL0Ce5uRdY9JT9Kyh7ySWFtPGG9S7CMMZd69WceRW2EGi8
+      - NETDATA_CLAIM_URL=https://app.netdata.cloud
+      - NETDATA_CLAIM_ROOMS=7facd6c8-0a14-4178-a435-f9a813fee61b
+
+  # pupcloud:
+  #   image: germanorizzo/pupcloud:latest
+  #   container_name: pupcloud
+  #   ports:
+  #     - 8230:17178
+  #   volumes:
+  #     - ~/sVault:/data
+  #   environment:
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - PUP_TITLE=Oasis fMan
+  #     - PUP_ALLOW_EDITS=1
+  #     - PUP_FOLLOW_SYMLINKS=1
+  #     - PUP_PASSWORD=Heaven
+  #     # - PUP_PWD_HASH=exyf6865fvgjhretupinbhghcgxhkvjgdbcvxvch
+  #   restart: unless-stopped
+
+  # odoo:
+  #   image: odoo:15.0
+  #   container_name: odoo
+  #   env_file: ../global.env
+  #   depends_on:
+  #     - postgres
+  #   ports:
+  #     - 8069:8069
+  #   volumes:
+  #     - ~/Vault/config/Swag/odoo/data:/var/lib/odoo
+  #   restart: unless-stopped
+  # postgres:
+  #   image: postgres:13
+  #   container_name: postgres
+  #   env_file: ../global.env
+  #   volumes:
+  #     - ~/Vault/config/Swag/odoo/db:/var/lib/postgresql/data/pgdata
+  #   restart: unless-stopped
+
+# volumes:
+#   data:
+#   db:
+
+# dnsmasq:
+#   image: jpillora/dnsmasq
+#   container_name: dnsmasq
+#   ports:
+#     - 5353:53/udp
+#     - 5380:8080
+#   volumes:
+#     - ~/Prog/dns/dnsmasq.conf:/etc/dnsmasq.conf
+#     - ~/Prog/dns/dnsmasq.d/example.com.conf:/etc/dnsmasq.d/example.com.conf
+#   logging:
+#     options:
+#       max-size: 100m
+#   environment:
+#     - HTTP_USER=Oasis
+#     - HTTP_PASS=Heaven
+#   restart: unless-stopped
+
+volumes:
+  netdataconfig:
+  netdatalib:
+  netdatacache:
